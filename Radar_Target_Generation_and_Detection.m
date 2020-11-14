@@ -148,7 +148,8 @@ RDM = 10*log10(RDM) ;
 %dimensions
 doppler_axis = linspace(-100,100,Nd);
 range_axis = linspace(-200,200,Nr/2)*((Nr/2)/400);
-figure,surf(doppler_axis,range_axis,RDM);
+figure ('Name','2D FFT Range Doppler Map')
+surf(doppler_axis,range_axis,RDM);
 
 %% CFAR implementation
 
@@ -235,7 +236,7 @@ RDM(RDM~=0 & RDM~=1) = 0;
 %display the CFAR output using the Surf function like we did for Range
 %Doppler Response output.
 
-figure %,surf(doppler_axis,range_axis,'replace this with output');
+figure ('Name','CFAR output')
 surf(doppler_axis,range_axis,RDM);
 
 colorbar;
