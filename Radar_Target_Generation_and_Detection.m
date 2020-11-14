@@ -35,33 +35,33 @@ B_sweep = c/(2*range_resolution); %Calculate the Bandwidth (B)
 
 T_chirp = 5.5*2*max_range/c;
 
-slope=B_sweep/T_chirp;
+slope = B_sweep/T_chirp;
 
 
 %Operating carrier frequency of Radar 
-fc= 77e9;             %carrier freq
+fc = 77e9;             %carrier freq
 
                                                           
 %The number of chirps in one sequence. Its ideal to have 2^ value for the ease of running the FFT
 %for Doppler Estimation. 
-Nd=128;                   % #of doppler cells OR #of sent periods % number of chirps
+Nd = 128;                   % #of doppler cells OR #of sent periods % number of chirps
 
 %The number of samples on each chirp. 
-Nr=1024;                  %for length of time OR # of range cells
+Nr = 1024;                  %for length of time OR # of range cells
 
 % Timestamp for running the displacement scenario for every sample on each
 % chirp
-t=linspace(0,Nd*T_chirp,Nr*Nd); %total time for samples
+t = linspace(0,Nd*T_chirp,Nr*Nd); %total time for samples
 
 
 %Creating the vectors for Tx, Rx and Mix based on the total samples input.
-Tx=zeros(1,length(t)); %transmitted signal
-Rx=zeros(1,length(t)); %received signal
+Tx = zeros(1,length(t)); %transmitted signal
+Rx = zeros(1,length(t)); %received signal
 Mix = zeros(1,length(t)); %beat signal
 
 %Similar vectors for range_covered and time delay.
-r_t=zeros(1,length(t));
-td=zeros(1,length(t));
+r_t = zeros(1,length(t));
+td = zeros(1,length(t));
 
 
 %% Signal generation and Moving Target simulation
@@ -71,7 +71,7 @@ for i=1:length(t)
      
     % *%TODO* :
     %For each time stamp update the Range of the Target for constant velocity. 
-    r_t(i) = target_pos+(target_vel*t(i));
+    r_t(i) = target_pos + (target_vel*t(i));
     td(i) = 2*r_t(i)/c; % Time delay 
        
     % *%TODO* :
@@ -84,8 +84,8 @@ for i=1:length(t)
     %Now by mixing the Transmit and Receive generate the beat signal
     %This is done by element wise matrix multiplication of Transmit and
     %Receiver Signal
-    Mix(i) = Tx(i) .* Rx(i);
-    
+    Mix(i) = Tx(i).* Rx(i);
+
 end
 
 %% RANGE MEASUREMENT
@@ -94,21 +94,21 @@ end
 % *%TODO* :
 %reshape the vector into Nr*Nd array. Nr and Nd here would also define the size of
 %Range and Doppler FFT respectively.
-Mix_reshape = reshape(Mix,[Nr,Nd]);
+Mix1 = reshape(Mix,[Nr,Nd]);
 
  % *%TODO* :
 %run the FFT on the beat signal along the range bins dimension (Nr) and
 %normalize.
-sig_fft1=fft(Mix_reshape,Nr)./Nr;
+sig_fft1 = fft(Mix1,Nr)./Nr;
 
  % *%TODO* :
 % Take the absolute value of FFT output
-sig_fft1=abs(sig_fft1);
+sig_fft1 = abs(sig_fft1);
 
  % *%TODO* :
 % Output of FFT is double sided signal, but we are interested in only one side of the spectrum.
 % Hence we throw out half of the samples.
-sig_fft1=sig_fft1(1:Nr/2);
+sig_fft1 = sig_fft1(1:Nr/2);
 
 
 %plotting the range
@@ -117,7 +117,6 @@ subplot(2,1,1)
 
  % *%TODO* :
  % plot FFT output 
-
 plot(sig_fft1);
  
 axis ([0 200 0 1]);
@@ -134,7 +133,7 @@ axis ([0 200 0 1]);
 % doppler FFT bins. So, it is important to convert the axis from bin sizes
 % to range and doppler based on their Max values.
 
-Mix=reshape(Mix,[Nr,Nd]);
+Mix = reshape(Mix,[Nr,Nd]);
 
 % 2D FFT using the FFT size for both dimensions.
 sig_fft2 = fft2(Mix,Nr,Nd);
@@ -158,19 +157,19 @@ figure,surf(doppler_axis,range_axis,RDM);
 % *%TODO* :
 %Select the number of Training Cells in both the dimensions.
 
-Tr=10;
-Td=8;
+Tr = 10;
+Td = 8;
 
 % *%TODO* :
 %Select the number of Guard Cells in both dimensions around the Cell under 
 %test (CUT) for accurate estimation
 
-Gr=4;
-Gd=4;
+Gr = 4;
+Gd = 4;
 
 % *%TODO* :
 % offset the threshold by SNR value in dB
-off_set=1.4;
+off_set = 1.4;
 
 % *%TODO* :
 %Create a vector to store noise_level for each iteration on training cells
@@ -191,9 +190,7 @@ noise_level = zeros(1,1);
 
    % Use RDM[x,y] as the matrix from the output of 2D FFT for implementing
    % CFAR
-size(RDM)
 RDM = RDM/max(max(RDM)); % Normalizing
-size(RDM)
 for i = Tr+Gr+1:(Nr/2)-(Tr+Gr)
     for j = Td+Gd+1:(Nd)-(Td+Gd)
         %Create a vector to store noise_level for each iteration on training cells
@@ -225,10 +222,6 @@ for i = Tr+Gr+1:(Nr/2)-(Tr+Gr)
     end
 end
 
-RDM(RDM~=0 & RDM~=1) = 0;
-
-
-
 
 % *%TODO* :
 % The process above will generate a thresholded block, which is smaller 
@@ -236,17 +229,12 @@ RDM(RDM~=0 & RDM~=1) = 0;
 %matrix. Hence,few cells will not be thresholded. To keep the map size same
 % set those values to 0. 
  
-
-
-
-
-
-
-
+RDM(RDM~=0 & RDM~=1) = 0;
 
 % *%TODO* :
 %display the CFAR output using the Surf function like we did for Range
 %Doppler Response output.
+
 figure %,surf(doppler_axis,range_axis,'replace this with output');
 surf(doppler_axis,range_axis,RDM);
 

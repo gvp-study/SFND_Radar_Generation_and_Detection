@@ -16,55 +16,95 @@ Perform Range FFT on the received signal to determine the Range
 Towards the end, perform the CFAR processing on the output of 2nd FFT to display the target.
 Radar System Requirements
 
-System Requirements defines the design of a Radar. The sensor fusion design for different driving scenarios requires different system configurations from a Radar. In this project, you will designing a Radar based on the given system requirements (above).
 
-Max Range and Range Resolution will be considered here for waveform design.
-
-The sweep bandwidth can be determined according to the range resolution and the sweep slope is calculated using both sweep bandwidth and sweep time.
-
-Bandwidth(Bsweep)=speedoflight/(2∗rangeResolution)
-
-The sweep time can be computed based on the time needed for the signal to travel the unambiguous maximum range. In general, for an FMCW radar system, the sweep time should be at least 5 to 6 times the round trip time. This example uses a factor of 5.5.
-
-chirp=5.5⋅2⋅Rmax/c
-
-Giving the slope of the chirp signal
-
-Slope=Bandwidth/Tchirp
-​	 
-Initial Range and velocity of the Target
-You will provide the initial range and velocity of the target. Range cannot exceed the max value of 200m and velocity can be any value in the range of -70 to + 70 m/s.
 <img src="./radar_signal_formula.png" width="779" height="414" />
+<img src="./images/radar_signal_fft1.png" width="779" height="414" />
+Clearly the peak shows that there is a target at range = 100m.
 
 # FP.1: Implementing the 2D CFAR
-
-Next, you will be simulating the signal propagation and moving target scenario.
-
-Theory :
-
-In terms of wave equation, FMCW transmit and received signals are defined using these wave equations, where
-
-α=Slopeofthesignal. The Transmit Signal is given by:
-
-Tx=cos(2π(fc​	 t+2 αt 2))
-
-The received signal is nothing but the time delayed version of the Transmit Signal. In digital signal processing the time delayed version is defined by
-((t−τ), where τ
-τ represents the delay time, which in radar processing is the trip time for the signal.
-
-On mixing these two signals, we get the beat signal, which holds the values for both range as well as doppler. By implementing the 2D FFT on this beat signal, we can extract both Range and Doppler information
-
-The beat signal can be calculated by multiplying the Transmit signal with Receive signal. This process in turn works as frequency subtraction. It is implemented by element by element multiplication of transmit and receive signal matrices.
-
-Mixed or Beat Signal = (Tx.*Rx)
-
-<img src="./images/radar_signal_fft1.png" width="779" height="414" />
-
-
-# FP.2: Selecting Training, Guard Cells and offset
+Once the signal is passed through the 2D FFT we have the range doppler map as shown below.
 <img src="./images/radar_signal_fft2.png" width="779" height="414" />
 
+```Matlab
+%design a loop such that it slides the CUT across range doppler map by
+%giving margins at the edges for Training and Guard Cells.
+%For every iteration sum the signal level within all the training
+%cells. To sum convert the value from logarithmic to linear using db2pow
+%function. Average the summed values for all of the training
+%cells used. After averaging convert it back to logarithimic using pow2db.
+%Further add the offset to it to determine the threshold. Next, compare the
+%signal under CUT with this threshold. If the CUT level > threshold assign
+%it a value of 1, else equate it to 0.
 
+
+   % Use RDM[x,y] as the matrix from the output of 2D FFT for implementing
+   % CFAR
+RDM = RDM/max(max(RDM)); % Normalizing
+for i = Tr+Gr+1:(Nr/2)-(Tr+Gr)
+    for j = Td+Gd+1:(Nd)-(Td+Gd)
+        %Create a vector to store noise_level for each iteration on training cells
+        noise_level = zeros(1,1);
+        %Step through each of bins and the surroundings of the CUT
+        for p = i-(Tr+Gr) : i+(Tr+Gr)
+            for q = j-(Td+Gd) : j+(Td+Gd)
+                %Exclude the Guard cells and CUT cells
+                if (abs(i-p) > Gr || abs(j-q) > Gd)
+                    %Convert db to power
+                    noise_level = noise_level + db2pow(RDM(p,q));
+                end
+            end
+        end
+
+        %Calculate threshould from noise average then add the offset
+        threshold = pow2db(noise_level/(2*(Td+Gd+1)*2*(Tr+Gr+1)-(Gr*Gd)-1));
+        %Add the SNR to the threshold
+        threshold = threshold + off_set;
+        %Measure the signal in Cell Under Test(CUT) and compare against
+        CUT = RDM(i,j);
+
+        if (CUT < threshold)
+            RDM(i,j) = 0;
+        else
+            RDM(i,j) = 1;
+        end
+
+    end
+end
+
+```
+# FP.2: Selecting Training, Guard Cells and offset
+The window used for the cell under test (CUT) with training and guard cells for both the range and doppler axis as shown below.
+
+```Matlab
+%Select the number of Training Cells in both the dimensions.
+
+Tr = 10;
+Td = 8;
+
+% *%TODO* :
+%Select the number of Guard Cells in both dimensions around the Cell under
+%test (CUT) for accurate estimation
+
+Gr = 4;
+Gd = 4;
+
+% *%TODO* :
+% offset the threshold by SNR value in dB
+off_set = 1.4;
+
+% *%TODO* :
+%Create a vector to store noise_level for each iteration on training cells
+noise_level = zeros(1,1);
+
+```
 
 # FP.3: Thresholding at the edges
+The edges of the RDM which was not processed by the previous CFAR algorithm is now set to 0 as shown below.
+
+```Matlab
+RDM(RDM~=0 & RDM~=1) = 0;
+
+```
+The result is the clean target with a range at 100m and 25-35m/sec speed.
+
 <img src="./images/radar_doppler_filtered.png" width="779" height="414" />
