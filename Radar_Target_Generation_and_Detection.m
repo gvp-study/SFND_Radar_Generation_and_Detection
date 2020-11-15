@@ -159,18 +159,18 @@ surf(doppler_axis,range_axis,RDM);
 %Select the number of Training Cells in both the dimensions.
 
 Tr = 10;
-Td = 8;
+Td = 5;
 
 % *%TODO* :
 %Select the number of Guard Cells in both dimensions around the Cell under 
 %test (CUT) for accurate estimation
 
 Gr = 4;
-Gd = 4;
+Gd = 2;
 
 % *%TODO* :
 % offset the threshold by SNR value in dB
-off_set = 1.4;
+offset = 1.4;
 
 % *%TODO* :
 %Create a vector to store noise_level for each iteration on training cells
@@ -194,27 +194,25 @@ noise_level = zeros(1,1);
 RDM = RDM/max(max(RDM)); % Normalizing
 for i = Tr+Gr+1:(Nr/2)-(Tr+Gr)
     for j = Td+Gd+1:(Nd)-(Td+Gd)
-        %Create a vector to store noise_level for each iteration on training cells
+        % Create a vector to store noise_level for each iteration on training cells
         noise_level = zeros(1,1);
-        %Step through each of bins and the surroundings of the CUT
+        % Find the noise in the 2D window around the CUT, except guard cells.
         for p = i-(Tr+Gr) : i+(Tr+Gr)
             for q = j-(Td+Gd) : j+(Td+Gd)
-                %Exclude the Guard cells and CUT cells
                 if (abs(i-p) > Gr || abs(j-q) > Gd)
-                    %Convert db to power
                     noise_level = noise_level + db2pow(RDM(p,q));
                 end
             end
         end
         
-        %Calculate threshould from noise average then add the offset
+        % Calculate threshold from noise average + offset
         threshold = pow2db(noise_level/(2*(Td+Gd+1)*2*(Tr+Gr+1)-(Gr*Gd)-1));
-        %Add the SNR to the threshold
-        threshold = threshold + off_set;
-        %Measure the signal in Cell Under Test(CUT) and compare against
-        CUT = RDM(i,j);
+        threshold = threshold + offset;
         
-        if (CUT < threshold)
+        % Threshold the signal in Cell Under Test(CUT)
+        CUT_signal = RDM(i,j);
+        
+        if (CUT_signal < threshold)
             RDM(i,j) = 0;
         else
             RDM(i,j) = 1;
@@ -238,7 +236,6 @@ RDM(RDM~=0 & RDM~=1) = 0;
 
 figure ('Name','CFAR output')
 surf(doppler_axis,range_axis,RDM);
-
 colorbar;
 
 
