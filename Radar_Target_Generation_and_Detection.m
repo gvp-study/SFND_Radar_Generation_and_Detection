@@ -192,22 +192,22 @@ noise_level = zeros(1,1);
    % Use RDM[x,y] as the matrix from the output of 2D FFT for implementing
    % CFAR
 RDM = RDM/max(max(RDM)); % Normalizing
+area = (2*(Td+Gd+1)*2*(Tr+Gr+1)-(Gr*Gd)-1);
 for i = Tr+Gr+1:(Nr/2)-(Tr+Gr)
     for j = Td+Gd+1:(Nd)-(Td+Gd)
-        % Create a vector to store noise_level for each iteration on training cells
+        % Noise level accumulator
         noise_level = zeros(1,1);
-        % Find the noise in the 2D window around the CUT, except guard cells.
-        for p = i-(Tr+Gr) : i+(Tr+Gr)
-            for q = j-(Td+Gd) : j+(Td+Gd)
-                if (abs(i-p) > Gr || abs(j-q) > Gd)
-                    noise_level = noise_level + db2pow(RDM(p,q));
+        % Add the noise in the 2D window around the CUT, except guard cells.
+        for k = i-(Tr+Gr) : i+(Tr+Gr)
+            for l = j-(Td+Gd) : j+(Td+Gd)
+                if (abs(i-k) > Gr || abs(j-l) > Gd)
+                    noise_level = noise_level + db2pow(RDM(k,l));
                 end
             end
         end
         
         % Calculate threshold from noise average + offset
-        threshold = pow2db(noise_level/(2*(Td+Gd+1)*2*(Tr+Gr+1)-(Gr*Gd)-1));
-        threshold = threshold + offset;
+        threshold = pow2db(noise_level/area) + offset;
         
         % Threshold the signal in Cell Under Test(CUT)
         CUT_signal = RDM(i,j);
